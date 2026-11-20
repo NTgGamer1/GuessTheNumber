@@ -14,6 +14,8 @@ A simple terminal guessing game written in C. The program chooses a random numbe
 8. After five unsuccessful attempts, unlimited guessing begins.
 9. The game ends only after the correct number is guessed.
 
+The main menu also includes an option to remove a player. Search for the player, select the matching record, and confirm the removal.
+
 ## Scoring
 
 | Correct attempt | Stars |
