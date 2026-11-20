@@ -260,16 +260,196 @@ static void show_leaderboard(Player *players, int count)
     printf("=====================================================\n");
 }
 
-static void play_game(Player **players, int *count, int *capacity)
+static int choose_player_name(Player *players, int count, char *name)
 {
-    char name[NAME_LENGTH];
+    for (;;)
+    {
+        int choice;
 
-    printf("\nEnter your name: ");
-    if (!read_name(name, sizeof name))
+        printf("\nHave you played before?\n");
+        printf("1. Yes, I have played before\n");
+        printf("2. New player\n");
+        printf("Choice: ");
+
+        int result = read_integer(&choice);
+        if (result == -1)
+            return -1;
+        if (result == 0 || (choice != 1 && choice != 2))
+        {
+            printf("Please choose 1 or 2.\n");
+            continue;
+        }
+
+        if (choice == 2)
+        {
+            printf("\nEnter your name: ");
+            if (!read_name(name, NAME_LENGTH))
+            {
+                printf("Could not read the player name.\n");
+                return -1;
+            }
+            return 1;
+        }
+
+        if (count == 0)
+        {
+            printf("\nNo previous players were found. Choose New player.\n");
+            continue;
+        }
+
+        for (;;)
+        {
+            char search[NAME_LENGTH];
+            int *matches = (int *)malloc((size_t)count * sizeof(int));
+            int match_count = 0;
+
+            if (matches == NULL)
+            {
+                printf("Memory allocation failed.\n");
+                return -1;
+            }
+
+            printf("\nEnter your name or part of your name: ");
+            if (!read_name(search, NAME_LENGTH))
+            {
+                free(matches);
+                return -1;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (strstr(players[i].name, search) != NULL)
+                {
+                    matches[match_count] = i;
+                    match_count++;
+                }
+            }
+
+            if (match_count == 0)
+            {
+                free(matches);
+                printf("No similar players found. Try again.\n");
+                continue;
+            }
+
+            printf("\nSimilar players:\n");
+            for (int i = 0; i < match_count; i++)
+            {
+                Player *player = &players[matches[i]];
+                printf("%d. %s (%d stars, %d guesses)\n",
+                       i + 1,
+                       player->name,
+                       player->total_stars,
+                       player->total_guesses);
+            }
+            printf("Choose your player: ");
+
+            result = read_integer(&choice);
+            if (result == -1)
+            {
+                free(matches);
+                return -1;
+            }
+            if (result >= 1 && result <= match_count)
+            {
+                strcpy(name, players[matches[choice - 1]].name);
+                free(matches);
+                return 1;
+            }
+
+            free(matches);
+            printf("Invalid player choice. Try again.\n");
+        }
+    }
+}
+
+static void remove_player(Player *players, int *count)
+{
+    if (*count == 0)
+    {
+        printf("\nNo players are available to remove.\n");
+        return;
+    }
+
+    char search[NAME_LENGTH];
+    printf("\nEnter the player name or part of the name to remove: ");
+    if (!read_name(search, NAME_LENGTH))
     {
         printf("Could not read the player name.\n");
         return;
     }
+
+    int *matches = (int *)malloc((size_t)*count * sizeof(int));
+    if (matches == NULL)
+    {
+        printf("Memory allocation failed.\n");
+        return;
+    }
+
+    int match_count = 0;
+    for (int i = 0; i < *count; i++)
+    {
+        if (strstr(players[i].name, search) != NULL)
+        {
+            matches[match_count] = i;
+            match_count++;
+        }
+    }
+
+    if (match_count == 0)
+    {
+        printf("No matching player was found.\n");
+        free(matches);
+        return;
+    }
+
+    printf("\nMatching players:\n");
+    for (int i = 0; i < match_count; i++)
+    {
+        Player *player = &players[matches[i]];
+        printf("%d. %s (%d stars, %d guesses)\n",
+               i + 1,
+               player->name,
+               player->total_stars,
+               player->total_guesses);
+    }
+
+    int choice;
+    printf("Choose a player to remove: ");
+    int result = read_integer(&choice);
+    if (result != 1 || choice < 1 || choice > match_count)
+    {
+        printf("Invalid player choice. No player was removed.\n");
+        free(matches);
+        return;
+    }
+
+    int player_index = matches[choice - 1];
+    printf("Remove %s? Enter 1 for yes or 2 for no: ",
+           players[player_index].name);
+    result = read_integer(&choice);
+    if (result != 1 || choice != 1)
+    {
+        printf("Player was not removed.\n");
+        free(matches);
+        return;
+    }
+
+    for (int i = player_index; i < *count - 1; i++)
+        players[i] = players[i + 1];
+    (*count)--;
+
+    save_leaderboard(players, *count);
+    printf("Player removed successfully.\n");
+    free(matches);
+}
+
+static void play_game(Player **players, int *count, int *capacity,
+                      const char *selected_name)
+{
+    char name[NAME_LENGTH];
+
+    strcpy(name, selected_name);
 
     int secret_number = rand() % 100 + 1;
     int attempts = 0;
@@ -393,6 +573,7 @@ int main(void)
         printf("1. Play\n");
         printf("2. View leaderboard\n");
         printf("3. Exit\n");
+        printf("4. Remove player\n");
         printf("Choice: ");
 
         int result = read_integer(&choice);
@@ -409,7 +590,13 @@ int main(void)
 
         if (choice == 1)
         {
-            play_game(&players, &count, &capacity);
+            char player_name[NAME_LENGTH];
+            int player_result =
+                choose_player_name(players, count, player_name);
+
+            if (player_result == -1)
+                break;
+            play_game(&players, &count, &capacity, player_name);
         }
         else if (choice == 2)
         {
@@ -419,6 +606,10 @@ int main(void)
         {
             printf("Goodbye.\n");
             break;
+        }
+        else if (choice == 4)
+        {
+            remove_player(players, &count);
         }
         else
         {

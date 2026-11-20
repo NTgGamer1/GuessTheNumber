@@ -4,12 +4,15 @@ A simple terminal guessing game written in C. The program chooses a random numbe
 
 ## Game Rules
 
-1. Enter a player name.
-2. Enter a number from 1 to 100.
-3. The game shows whether the secret number is higher or lower.
-4. The first five valid guesses are scoring attempts.
-5. After five unsuccessful attempts, unlimited guessing begins.
-6. The game ends only after the correct number is guessed.
+1. Choose **Play** from the main menu.
+2. Select whether you have played before or are a new player.
+3. Returning players can search for their name and select it from similar leaderboard names.
+4. New players enter a new name.
+5. Enter a number from 1 to 100.
+6. The game shows whether the secret number is higher or lower.
+7. The first five valid guesses are scoring attempts.
+8. After five unsuccessful attempts, unlimited guessing begins.
+9. The game ends only after the correct number is guessed.
 
 ## Scoring
 
